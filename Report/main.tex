@@ -1,0 +1,100 @@
+\documentclass{article}
+
+\usepackage[english]{babel}
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\setlength{\parindent}{0pt}
+
+\title{ECE 379K Final Project Proposal}
+\author{Steven Chen}
+
+\begin{document}
+\maketitle
+
+%%%%%%%%%%
+\begin{abstract}
+With the widespread adoption of Kubernetes, the enforcement of security policies has shifted from manual verification to automated "Policy-as-Code." Although native Kubernetes Pod Security Admission (PSA) exists, it does not have the fine grain control that other third-party tools have. Through the use of webhooks, third party tools provide additional functionality in comparison with the native PSA. However, this introduces network latency and resource overhead to the API server. This project proposes a comparative analysis that measures admission latency and CPU consumption under burst workloads to determine if the flexibility of third-party tools justifies their "performance tax" compared to native tooling.
+\end{abstract}
+
+%%%%%%%%%%
+\section{Introduction}
+\label{sec:intro}
+
+The widespread migration to cloud-native infrastructure also requires organizations to adapt their security models to a new environment. With containerized workloads, some examples may include running containers as root or mounting sensitive host paths. Humans are prone to mistakes and with the scale of some organizations, it quickly becomes hard to keep track of all the security polices to govern their newly migrated cloud applications. 
+
+Kubernetes provides a native PSA, which may be adequate for some users, but others may seek more flexibility or a finer grain control, which pushes them towards third-party solutions such as OPA Gatekeeper or Kyverno. These tools are on the path of every pod deployment. If the webhooks are slow or resource-intensive, they can degrade the performance of large clusters. A balance between security and usability must be matched to keep business operations running.
+
+My approach is to capture the effectiveness and performance of some third-party tooling and compare it to the native implementation. I will provision identical clusters and subject them to a controlled burst of pod creation requests that will contain a mix of both compliant and non-compliant workloads. This should give me insight into the latency and performance of each policy evaluation engine.
+
+
+%%%%%%%%%%
+\section{Motivation}
+\label{sec:motivation}
+
+The primary motivation for this work is the operational "tax" introduced by third-party security tools. With the deprecation of \texttt{PodSecurityPolicy} (PSP) in Kubernetes v1.25, it left users with the option to adopt the new native PSA, or move over to a third-party tool. \cite{psp_deprecation}.
+
+While PSA is highly performant because it runs in-process within the API server, it is functionally restricted to three predefined profiles (Privileged, Baseline, Restricted). To achieve finer-grain control, operators must adopt third-party tools. 
+
+The use of a third-party to valid admission webhooks will route the API request to be processed elsewhere. this architecture introduces latency and an increased resource load.
+
+%%%%%%%%%%
+\section{Proposed Design or Architecture}
+\label{sec:arch}
+
+\subsection{Environment}
+I  will utilize a Kubernetes cluster (provisioned via TBD? (Kind, K3s, Talos Linux)) to host the experiment. The system consists of three(?) distinct configurations that will be tested sequentially:
+\begin{enumerate}
+    \item \textbf{Baseline (Native):} Kubernetes Pod Security Admission (PSA) enabled with the \texttt{restricted} profile.
+    \item \textbf{Configuration A (OPA):} OPA Gatekeeper installed via Helm, utilizing Rego-based \texttt{ConstraintTemplates}.
+    \item \textbf{Configuration B (Kyverno):} Kyverno installed via Helm, utilizing YAML-based \texttt{ClusterPolicies}.
+\end{enumerate}
+
+\subsection{Workload}
+I will develop a Python-based load generator using the \texttt{kubernetes-client} library. The generator will issue asynchronous HTTP POST requests to the API server. The workload consists of 1000 requests issued in bursts, with a 50/50 split between "Compliant" (passing) and "Non-Compliant" (failing) pods. This ensures the engines must fully evaluate the policy logic.
+
+\subsection{Metrics}
+I will measure:
+\begin{itemize}
+    \item \textbf{Admission Latency:} The time elapsed between the request transmission and the API server response (201 Created or 403 Forbidden).
+    \item \textbf{Resource Overhead:} The CPU and Memory usage of the controller pods during the test window, scraped via TBD (Prometheus?).
+\end{itemize}
+
+%%%%%%%%%%
+\section{Evaluation / Experimental Results}
+\label{sec:eval}
+
+\subsection{Projected Results: Latency}
+Figure \ref{fig:latency} illustrates the expected latency distribution. I anticipate a distinct "step up" in P99 latency when moving from native controls to third-party webhooks. The P99 metric is particularly important as it represents the "tail latency" that affects system stability during high-load events.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\linewidth]{latency_results.png}
+\caption{\label{fig:latency}Hypothesized Admission Latency (Average vs P99). Native PSA is expected to be significantly faster than webhook-based alternatives.}
+\end{figure}
+
+\subsection{Projected Results: Resource Overhead}
+Figure \ref{fig:cpu} highlights the expected CPU consumption. I expect OPA consumption to be higher than Kyverno, which is designed to query the API server more directly.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\linewidth]{cpu_overhead.png}
+\caption{\label{fig:cpu}Hypothesized CPU Usage (mCores) during burst workload. Spikes correspond to the policy engine processing the 1000-request burst.}
+\end{figure}
+
+%%%%%%%%%%
+\section{Related Work}
+\label{sec:related}
+\input {related}
+
+%%%%%%%%%%
+\section{Conclusions}
+\label{sec:conclusion}
+\input {conclusion}
+
+\bibliographystyle{alpha}
+\bibliography{sample}
+
+\end{document}

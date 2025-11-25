@@ -1,0 +1,5 @@
+\subsection{Architectural Comparisons}
+Plural highlights that OPA Gatekeeper utilizes the Rego query language, which, while powerful and portable across the entire cloud-native stack (e.g., Terraform, Linux PAM), introduces a significant "complexity gap" and operational overhead. Conversely, Kyverno is architected specifically for Kubernetes, utilizing standard YAML for policy definitions. While this lowers the barrier to entry, Plural notes that it limits the tool's scope strictly to the cluster environment. \cite{plural2025}
+
+\subsection{Performance Characteristics}
+While the Plural guide provides a strong qualitative analysis, it notes performance trade-offs conceptually rather than quantitatively. It suggests that OPA is optimized for fast, complex policy evaluation but consumes more CPU and memory due to its multi-pod architecture. Kyverno is described as having a smaller footprint due to its native design but may be less performant in raw evaluation speed for complex logic \cite{plural2025}. Our project aims to validate these claims by generating empirical data on admission latency and resource consumption under burst conditions.
