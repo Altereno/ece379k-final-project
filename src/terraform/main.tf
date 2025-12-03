@@ -6,19 +6,28 @@ terraform {
   }
 }
 
+provider "proxmox" {
+  endpoint  = var.endpoint
+  api_token = var.api_token
+  ssh {
+    agent    = true
+    username = var.username
+    password = var.password
+  }
+}
+
 resource "proxmox_virtual_environment_download_file" "ubuntu_base_image" {
-  node_name               = var.node_name
-  content_type            = "iso"
-  datastore_id            = var.image_datastore_id
-  file_name               = "compsec-ubuntu_base_image"
-  url                     = var.ubuntu_base_image_url
-  decompression_algorithm = "gz"
-  overwrite               = false
+  node_name    = var.node_name
+  content_type = "import"
+  datastore_id = var.image_datastore_id
+  file_name    = "compsec-ubuntu_base_image.qcow2"
+  url          = var.ubuntu_base_image_url
+  overwrite    = false
 }
 
 resource "proxmox_virtual_environment_vm" "vms" {
   count       = length(var.vm_names)
-  name        = var.storage_account_names[count.index]
+  name        = var.vm_names[count.index]
   description = "Managed by Terraform"
   tags        = ["compsec"]
   node_name   = var.node_name
@@ -27,8 +36,9 @@ resource "proxmox_virtual_environment_vm" "vms" {
     type = "l26"
   }
 
+  stop_on_destroy = true
   agent {
-    enabled = true
+    enabled = false
   }
 
   cpu {
@@ -59,7 +69,7 @@ resource "proxmox_virtual_environment_vm" "vms" {
     user_account {
       username = "compsec"
       keys = [
-        file(var.ssh_key_file)
+        file(var.ssh_public_key)
       ]
     }
     dns {

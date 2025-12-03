@@ -84,6 +84,6 @@ variable "ubuntu_base_image_url" {
 }
 
 variable "ssh_public_key" {
-  description = "Public SSH key for Ansible access"
+  description = "Public SSH key file for Ansible access"
   type        = string
 }
