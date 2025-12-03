@@ -92,3 +92,5 @@ terraform.rc
 # planout
 
 keys/
+
+**/.DS_Store
