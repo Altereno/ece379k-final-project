@@ -1,0 +1,56 @@
+---
+- name: Apt update & upgrade
+  hosts: compsec
+  tasks:
+    - name: Update and upgrade apt packages
+      become: true
+      ansible.builtin.apt:
+        upgrade: true
+        update_cache: true
+
+- name: Install package manager
+  hosts: compsec
+  tasks:
+    - name: Install dependencies
+      become: true
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - procps
+          - curl
+          - file
+          - git
+        state: present
+    - name: Check for Homebrew binary
+      ansible.builtin.stat:
+        path: /home/linuxbrew/.linuxbrew/bin/brew
+      register: brew_check
+    - name: Install Homebrew
+      ansible.builtin.shell: /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      when: not brew_check.stat.exists
+      environment:
+        NONINTERACTIVE: "1"
+      changed_when: false
+    - name: Add brew to PATH
+      ansible.builtin.lineinfile:
+        path: "{{ ansible_env.HOME }}/.bashrc"
+        line: 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"'
+        create: true
+        mode: '0644'
+        state: present
+
+- name: Install Docker and kind
+  hosts: compsec
+  tasks:
+    - name: Update brew and all packages
+      community.general.homebrew:
+        update_homebrew: true
+        upgrade_all: true
+    - name: Install docker
+      community.general.homebrew:
+        name: docker
+        state: present
+    - name: Install kind
+      community.general.homebrew:
+        name: kind
+        state: present
