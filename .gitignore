@@ -98,3 +98,5 @@ keys/
 .vscode
 
 .venv/
+
+**/config*
