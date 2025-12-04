@@ -68,7 +68,6 @@
           Signed-By: /etc/apt/keyrings/docker.asc
         mode: '0644'
     - name: Install docker from apt
-      become: true
       ansible.builtin.apt:
         name:
           - docker-ce
@@ -78,6 +77,16 @@
           - docker-compose-plugin
         state: present
         update_cache: true
+    - name: Check Docker service is running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+    - name: Add compsec user to Docker group
+      ansible.builtin.user:
+        name: compsec
+        groups: docker
+        append: true
 
 - name: Install kind and kubernetes-cli
   hosts: compsec
