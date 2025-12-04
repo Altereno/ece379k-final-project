@@ -39,7 +39,7 @@
         mode: '0644'
         state: present
 
-- name: Install Docker and kind
+- name: Install Docker, kind, kubernetes-cli
   hosts: compsec
   tasks:
     - name: Update brew and all packages
@@ -53,4 +53,8 @@
     - name: Install kind
       community.general.homebrew:
         name: kind
+        state: present
+    - name: Install kubernetes-cli
+      community.general.homebrew:
+        name: kubernetes-cli
         state: present
