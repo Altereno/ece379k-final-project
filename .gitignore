@@ -96,3 +96,5 @@ keys/
 **/.DS_Store
 
 .vscode
+
+.venv/
