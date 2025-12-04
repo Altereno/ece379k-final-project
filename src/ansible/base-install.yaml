@@ -16,9 +16,7 @@
       ansible.builtin.apt:
         name:
           - build-essential
-          - procps
           - curl
-          - file
           - git
         state: present
     - name: Check for Homebrew binary
@@ -39,17 +37,55 @@
         mode: '0644'
         state: present
 
-- name: Install Docker, kind, kubernetes-cli
+- name: Install Docker
+  hosts: compsec
+  become: true
+  tasks:
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+        state: present
+    - name: Create directory for keyrings
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+    - name: Add Docker GPG key
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+    - name: Add Docker repository definition
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/docker.sources
+        content: |
+          Types: deb
+          URIs: https://download.docker.com/linux/ubuntu
+          Suites: {{ ansible_distribution_release }}
+          Components: stable
+          Signed-By: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+    - name: Install docker from apt
+      become: true
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+- name: Install kind and kubernetes-cli
   hosts: compsec
   tasks:
     - name: Update brew and all packages
       community.general.homebrew:
         update_homebrew: true
         upgrade_all: true
-    - name: Install docker
-      community.general.homebrew:
-        name: docker
-        state: present
     - name: Install kind
       community.general.homebrew:
         name: kind
