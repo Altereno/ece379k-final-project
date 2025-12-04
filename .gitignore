@@ -94,3 +94,5 @@ terraform.rc
 keys/
 
 **/.DS_Store
+
+.vscode
