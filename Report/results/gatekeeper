@@ -1,0 +1,22 @@
+Starting Benchmark: 1000 requests.
+Target: 50% Compliant, 50% Non-Compliant
+
+========================================
+Results:
+========================================
+Total Duration:     23.38 seconds
+Throughput:         42.78 req/sec
+----------------------------------------
+Latency (Avg):      23.37 ms
+Latency (P99):      90.81 ms
+----------------------------------------
+Policy Results:
+Good Pods Allowed:  500
+Bad Pods Denied:    500
+Good Pods Denied:   0
+Bad Pods Allowed:   0
+Errors:             0
+========================================
+
+Cleaning up benchmark pods.
+Cleanup initiated.
