@@ -5,6 +5,7 @@
 \usepackage{amsmath}
 \usepackage{graphicx}
 \usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{xcolor}
 
 \setlength{\parindent}{0pt}
 
@@ -27,7 +28,7 @@ The widespread migration to cloud-native infrastructure also requires organizati
 
 Kubernetes provides a native PSA, which may be adequate for some users, but others may seek more flexibility or a finer grain control, which pushes them towards third-party solutions such as OPA Gatekeeper or Kyverno. These tools are on the path of every pod deployment. If the webhooks are slow or resource-intensive, they can degrade the performance of large clusters. A balance between security and usability must be matched to keep business operations running.
 
-My approach is to capture the effectiveness and performance of some third-party tooling and compare it to the native implementation. I will provision identical clusters and subject them to a controlled burst of pod creation requests that will contain a mix of both compliant and non-compliant workloads. This should give me insight into the latency and performance of each policy evaluation engine.
+Our approach is to capture the effectiveness and performance of some third-party tooling and compare it to the native implementation. I will provision identical clusters and subject them to a controlled burst of pod creation requests that will contain a mix of both compliant and non-compliant workloads. This should give us insight into the latency and performance of each policy evaluation engine.
 
 
 %%%%%%%%%%
@@ -45,7 +46,7 @@ The use of a third-party to valid admission webhooks will route the API request 
 \label{sec:arch}
 
 \subsection{Environment}
-I  will utilize a Kubernetes cluster (provisioned via TBD? (Kind, K3s, Talos Linux)) to host the experiment. The system consists of three(?) distinct configurations that will be tested sequentially:
+\textcolor{green}{We will utilize Kubernetes clusters created via \href{https://kind.sigs.k8s.io/}{Kubernetes in Docker}. Each cluster will be provisioned on a QEMU virtual machine with 4 cores and 6GB of ram. We will test the following three configurations:}
 \begin{enumerate}
     \item \textbf{Baseline (Native):} Kubernetes Pod Security Admission (PSA) enabled with the \texttt{restricted} profile.
     \item \textbf{Configuration A (OPA):} OPA Gatekeeper installed via Helm, utilizing Rego-based \texttt{ConstraintTemplates}.
@@ -53,30 +54,56 @@ I  will utilize a Kubernetes cluster (provisioned via TBD? (Kind, K3s, Talos Lin
 \end{enumerate}
 
 \subsection{Workload}
-I will develop a Python-based load generator using the \texttt{kubernetes-client} library. The generator will issue asynchronous HTTP POST requests to the API server. The workload consists of 1000 requests issued in bursts, with a 50/50 split between "Compliant" (passing) and "Non-Compliant" (failing) pods. This ensures the engines must fully evaluate the policy logic.
+\textcolor{green}{We will develop a Python-based load generator using the \texttt{kubernetes-client} library. The generator will issue HTTP POST requests to the API server with either a compliant or a non-compliant pod request. The workload will consist of a total of 1000 requests. This ensures the engines must fully evaluate the policy logic.}
 
 \subsection{Metrics}
 I will measure:
 \begin{itemize}
     \item \textbf{Admission Latency:} The time elapsed between the request transmission and the API server response (201 Created or 403 Forbidden).
-    \item \textbf{Resource Overhead:} The CPU and Memory usage of the controller pods during the test window, scraped via TBD (Prometheus?).
+    \item \textbf{Resource Overhead:} The CPU and Memory usage of the controller pods during the test window.
 \end{itemize}
 
 %%%%%%%%%%
 \section{Evaluation / Experimental Results}
 \label{sec:eval}
 
-\subsection{Projected Results: Latency}
-Figure \ref{fig:latency} illustrates the expected latency distribution. I anticipate a distinct "step up" in P99 latency when moving from native controls to third-party webhooks. The P99 metric is particularly important as it represents the "tail latency" that affects system stability during high-load events.
+\subsection{Experimental Results: Admission Latency}
+\textcolor{green}{We measured the admission control latency by issuing 1000 pod creation requests (50\% compliant, 50\% non-compliant) to each configuration. Table \ref{tab:results} summarizes the observed performance.}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Configuration} & \textbf{Throughput (req/sec)} & \textbf{Avg Latency (ms)} & \textbf{P99 Latency (ms)} \\
+\hline
+\textcolor{green}{Native PSA} & \textcolor{green}{80.03} & \textcolor{green}{12.49} & \textcolor{green}{35.70} \\
+\hline
+\textcolor{green}{Kyverno} & \textcolor{green}{62.99} & \textcolor{green}{15.87} & \textcolor{green}{37.67} \\
+\hline
+\textcolor{green}{OPA Gatekeeper} & \textcolor{green}{42.78} & \textcolor{green}{23.37} & \textcolor{green}{90.81} \\
+\hline
+\end{tabular}
+\caption{\textcolor{green}{Experimental results for Admission Latency and Throughput.}}
+\label{tab:results}
+\end{table}
+
+\textcolor{green}{The Native PSA implementation established a baseline with the highest throughput (80.03 req/sec) and lowest latency. Kyverno introduced a minimal overhead, with average latency increasing by only $\approx$3.4ms compared to native. However, OPA Gatekeeper demonstrated a significant performance cost, reducing throughput by nearly 50\% compared to the native baseline and exhibiting a P99 latency spike to 90.81ms. This confirms the hypothesis that the OPA webhook and Rego evaluation impose a measurable "tax" on cluster performance, particularly at the tail end of the distribution.}
+
+\subsection{Projected Results: Resource Overhead}
+Figure \ref{fig:cpu} highlights the expected CPU consumption.
+I expect OPA consumption to be higher than Kyverno, which is designed to query the API server more directly.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=0.8\linewidth]{latency_results.png}
-\caption{\label{fig:latency}Hypothesized Admission Latency (Average vs P99). Native PSA is expected to be significantly faster than webhook-based alternatives.}
+\includegraphics[width=0.8\linewidth]{latency_comparison.png}
+\caption{\label{fig:latency}Admission control latency between the three systems}
 \end{figure}
 
-\subsection{Projected Results: Resource Overhead}
-Figure \ref{fig:cpu} highlights the expected CPU consumption. I expect OPA consumption to be higher than Kyverno, which is designed to query the API server more directly.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.8\linewidth]{throughput_comparison.png}
+\caption{\label{fig:throughput}Throughput between the three systems}
+\end{figure}
 
 \begin{figure}[ht]
 \centering
