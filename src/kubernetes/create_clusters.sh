@@ -15,11 +15,25 @@ for host in "${HOSTS[@]}"; do
         echo "Cluster already exists on $host. Skipping creation."
     else
         echo "No cluster found. Creating default cluster."
-        ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$host" "$KIND_CMD create cluster"
+        ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$host" "cat <<EOF > /home/$SSH_USER/kind-expose.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  apiServerAddress: \"0.0.0.0\"
+  apiServerPort: 6443
+kubeadmConfigPatches:
+  - |
+    kind: ClusterConfiguration
+    apiServer:
+      certSANs:
+        - \"$host\"
+EOF"
+        ssh -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$host" "$KIND_CMD create cluster --config /home/$SSH_USER/kind-expose.yaml"
     fi
 
     echo "Copying kubeconfig."
     scp -i "$SSH_KEY" -o StrictHostKeyChecking=no "$SSH_USER@$host:/home/$SSH_USER/.kube/config" "./config-$host"
+    sed -i '' "s/0.0.0.0/$host/g" ./config-$host
 
 done
 
